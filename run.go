@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -15,12 +16,11 @@ import (
 // main process
 func run(option *option, env *env, args *args, outStream, errStream io.Writer) int {
 	fatalLog := newFatalLogger(errStream)
-	stdLog := newStdLogger(outStream)
 
 	// --version
 	// show version
 	if option.showVersion {
-		stdLog.Println("rat version " + version)
+		fmt.Println(outStream, "rat version "+version)
 		return exitCodeOK
 	}
 
@@ -35,7 +35,7 @@ func run(option *option, env *env, args *args, outStream, errStream io.Writer) i
 
 		// print
 		for _, name := range blist {
-			stdLog.Println(name)
+			fmt.Fprintln(outStream, name)
 		}
 		return exitCodeOK
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -103,21 +104,16 @@ func newArgs(boilerplateName, projectPath string) *args {
 	}
 }
 
-func newStdLogger(outStream io.Writer) *log.Logger {
-	return log.New(outStream, "", 0)
-}
-
 func newFatalLogger(errStream io.Writer) *log.Logger {
 	return log.New(errStream, "fatal: ", 0)
 }
 
 func main() {
 	fatalLog := newFatalLogger(os.Stderr)
-	stdLog := newStdLogger(os.Stdout)
 
 	// flag parse
 	flag.Usage = func() {
-		stdLog.Println(usageMsg)
+		fmt.Println(usageMsg)
 		os.Exit(exitCodeOK)
 	}
 	showListL := flag.Bool("list", false, "Show boilerplate list")
@@ -142,7 +138,7 @@ func main() {
 	switch flag.NArg() {
 	case 0:
 		if flag.NFlag() == 0 {
-			stdLog.Println(usageMsg)
+			fmt.Println(usageMsg)
 			os.Exit(exitCodeError)
 		}
 	case 1:
