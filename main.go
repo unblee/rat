@@ -26,15 +26,15 @@ const (
 
 const usageMsg = `
 NAME:
-    lat - Boilerplate manager
+    rat - Boilerplate manager
 
 USAGE:
-    lat [global-options] [boilerplate-name] project-name
+    rat [global-options] [boilerplate-name] project-name
 
 GLOBAL-OPTIONS:
     --list, -l     Show boilerplate list
     --version, -v  Show version
-    --help, -h  Show this message
+    --help, -h     Show this message
 `
 
 // application option
@@ -52,32 +52,32 @@ func newOption(showList, showVersion bool) *option {
 
 // application env
 type env struct {
-	latRoot      string
-	latSelectCmd string
+	ratRoot      string
+	ratSelectCmd string
 }
 
-func newEnv(latRoot, latSelectCmd string) *env {
-	if latRoot == "" {
-		fatalLog.Fatalln("Please set 'LAT_ROOT' environment value")
+func newEnv(ratRoot, ratSelectCmd string) *env {
+	if ratRoot == "" {
+		fatalLog.Fatalln("Please set 'RAT_ROOT' environment value")
 	}
 
 	// expand path
-	latRoot = os.ExpandEnv(latRoot)
+	ratRoot = os.ExpandEnv(ratRoot)
 
 	// delete the suffix directory separator to unify the handling of the path
-	latRoot = strings.TrimSuffix(latRoot, string(filepath.Separator))
+	ratRoot = strings.TrimSuffix(ratRoot, string(filepath.Separator))
 
-	if !fileExists(latRoot) {
-		fatalLog.Fatalf("Not exists directory '%s'\n", latRoot)
+	if !fileExists(ratRoot) {
+		fatalLog.Fatalf("Not exists directory '%s'\n", ratRoot)
 	}
 
-	if latSelectCmd == "" || !cmdExists(latSelectCmd) {
-		fatalLog.Fatalf("Not exists '%s' command\n", latSelectCmd)
+	if ratSelectCmd == "" || !cmdExists(ratSelectCmd) {
+		fatalLog.Fatalf("Not exists '%s' command\n", ratSelectCmd)
 	}
 
 	return &env{
-		latRoot:      latRoot,
-		latSelectCmd: latSelectCmd,
+		ratRoot:      ratRoot,
+		ratSelectCmd: ratSelectCmd,
 	}
 }
 func fileExists(filename string) bool {
@@ -108,14 +108,14 @@ func run(option *option, env *env, args *args) int {
 	// --version
 	// show version
 	if option.showVersion {
-		fmt.Println("lat version " + version)
+		fmt.Println("rat version " + version)
 		return exitCodeOK
 	}
 
 	// --list
 	// show boilerplate list
 	if option.showList {
-		blist, err := blplList(env.latRoot)
+		blist, err := blplList(env.ratRoot)
 		if err != nil {
 			fatalLog.Println(err)
 			return exitCodeError
@@ -131,14 +131,14 @@ func run(option *option, env *env, args *args) int {
 	// select boilerplate
 	var srcBoilerplatePath string
 	if args.boilerplateName != "" {
-		srcBoilerplatePath = filepath.Join(env.latRoot, args.boilerplateName)
+		srcBoilerplatePath = filepath.Join(env.ratRoot, args.boilerplateName)
 	} else {
-		bname, err := selectBlpl(env.latRoot, env.latSelectCmd)
+		bname, err := selectBlpl(env.ratRoot, env.ratSelectCmd)
 		if err != nil {
 			fatalLog.Println(err)
 			return exitCodeError
 		}
-		srcBoilerplatePath = filepath.Join(env.latRoot, bname)
+		srcBoilerplatePath = filepath.Join(env.ratRoot, bname)
 	}
 	if !fileExists(srcBoilerplatePath) {
 		fatalLog.Printf("Not exists directory '%s'", srcBoilerplatePath)
@@ -157,9 +157,9 @@ func run(option *option, env *env, args *args) int {
 }
 
 // list of boilerplate directries
-func blplList(latRoot string) ([]string, error) {
-	// ls latRoot
-	dirs, err := ioutil.ReadDir(latRoot)
+func blplList(ratRoot string) ([]string, error) {
+	// ls ratRoot
+	dirs, err := ioutil.ReadDir(ratRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -176,17 +176,17 @@ func blplList(latRoot string) ([]string, error) {
 }
 
 // select boilerplate name
-func selectBlpl(latRoot, latSelectCmd string) (string, error) {
-	if latSelectCmd == "" {
-		return "", errors.New("Please set 'LAT_SELECT_CMD' environment value")
+func selectBlpl(ratRoot, ratSelectCmd string) (string, error) {
+	if ratSelectCmd == "" {
+		return "", errors.New("Please set 'RAT_SELECT_CMD' environment value")
 	}
-	list, err := blplList(latRoot)
+	list, err := blplList(ratRoot)
 	if err != nil {
 		return "", err
 	}
 
 	var buf bytes.Buffer
-	err = runSelect(latSelectCmd, strings.NewReader(strings.Join(list, "\n")), &buf)
+	err = runSelect(ratSelectCmd, strings.NewReader(strings.Join(list, "\n")), &buf)
 	if err != nil {
 		return "", err
 	}
@@ -269,9 +269,9 @@ func main() {
 	option := newOption(showList, showVersion)
 
 	// get env
-	latSelectCmd := os.Getenv("LAT_SELECT_CMD")
-	latRoot := os.Getenv("LAT_ROOT")
-	env := newEnv(latRoot, latSelectCmd)
+	ratSelectCmd := os.Getenv("RAT_SELECT_CMD")
+	ratRoot := os.Getenv("RAT_ROOT")
+	env := newEnv(ratRoot, ratSelectCmd)
 
 	// get args
 	var boilerplateName string

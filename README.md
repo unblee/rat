@@ -1,3 +1,3 @@
-# lat
+# rat
 
-Boilerp**lat**e manager
+Boile**r**pl**at**e manager
