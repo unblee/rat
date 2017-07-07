@@ -211,6 +211,7 @@ func runSelect(selectCmd string, r io.Reader, w io.Writer) error {
 }
 
 func copyDir(dst, src string) error {
+	os.Mkdir(dst, 0755)
 	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		// e.g.
 		// src  = /home/foo
@@ -225,7 +226,7 @@ func copyDir(dst, src string) error {
 
 		if info.IsDir() { // make dest dir
 			dstDir := filepath.Join(dst, path)
-			err := os.MkdirAll(dstDir, info.Mode())
+			err := os.Mkdir(dstDir, info.Mode())
 			if err != nil {
 				return err
 			}
