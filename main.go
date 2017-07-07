@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/mitchellh/go-homedir"
 )
 
 var fatalLog = log.New(os.Stderr, "fatal: ", 0)
@@ -62,6 +64,10 @@ func newEnv(ratRoot, ratSelectCmd string) *env {
 	}
 
 	// expand path
+	ratRoot, err := homedir.Expand(ratRoot)
+	if err != nil {
+		fatalLog.Fatal(err)
+	}
 	ratRoot = os.ExpandEnv(ratRoot)
 
 	// delete the suffix directory separator to unify the handling of the path
@@ -96,10 +102,17 @@ type args struct {
 	projectPath     string
 }
 
-func newArgs(boilerplateName, projectName string) *args {
+func newArgs(boilerplateName, projectPath string) *args {
+	// expand path
+	projectPath, err := homedir.Expand(projectPath)
+	if err != nil {
+		fatalLog.Fatalln(err)
+	}
+	projectPath = os.ExpandEnv(projectPath)
+
 	return &args{
 		boilerplateName: boilerplateName,
-		projectPath:     projectName,
+		projectPath:     projectPath,
 	}
 }
 
