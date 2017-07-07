@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,8 +10,6 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 )
-
-var fatalLog = log.New(os.Stderr, "fatal: ", 0)
 
 const version = "0.1.0" // application version
 
@@ -53,6 +51,8 @@ type env struct {
 }
 
 func newEnv(ratRoot, ratSelectCmd string) *env {
+	fatalLog := newFatalLogger(os.Stderr)
+
 	if ratRoot == "" {
 		fatalLog.Fatalln("Please set 'RAT_ROOT' environment value")
 	}
@@ -88,6 +88,8 @@ type args struct {
 }
 
 func newArgs(boilerplateName, projectPath string) *args {
+	fatalLog := newFatalLogger(os.Stderr)
+
 	// expand path
 	projectPath, err := homedir.Expand(projectPath)
 	if err != nil {
@@ -101,10 +103,21 @@ func newArgs(boilerplateName, projectPath string) *args {
 	}
 }
 
+func newStdLogger(outStream io.Writer) *log.Logger {
+	return log.New(outStream, "", 0)
+}
+
+func newFatalLogger(errStream io.Writer) *log.Logger {
+	return log.New(errStream, "fatal: ", 0)
+}
+
 func main() {
+	fatalLog := newFatalLogger(os.Stderr)
+	stdLog := newStdLogger(os.Stdout)
+
 	// flag parse
 	flag.Usage = func() {
-		fmt.Println(usageMsg)
+		stdLog.Println(usageMsg)
 		os.Exit(exitCodeOK)
 	}
 	showListL := flag.Bool("list", false, "Show boilerplate list")
@@ -129,7 +142,7 @@ func main() {
 	switch flag.NArg() {
 	case 0:
 		if flag.NFlag() == 0 {
-			fmt.Println(usageMsg)
+			stdLog.Println(usageMsg)
 			os.Exit(exitCodeError)
 		}
 	case 1:
@@ -142,5 +155,5 @@ func main() {
 	}
 	args := newArgs(boilerplateName, projectPath)
 
-	os.Exit(run(option, env, args))
+	os.Exit(run(option, env, args, os.Stdout, os.Stderr))
 }
