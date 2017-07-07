@@ -12,7 +12,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
-const version = "0.1.0" // application version
+const VERSION = "0.1.0" // application version
 
 const (
 	exitCodeOK = iota
@@ -31,6 +31,26 @@ GLOBAL-OPTIONS:
     --version, -v  Show version
     --help, -h     Show this message
 `
+
+type cli struct {
+	outStream io.Writer
+	errStream io.Writer
+	option    *option
+	env       *env
+	args      *args
+	fatalLog  *log.Logger
+}
+
+func newCLI(outStream, errStream io.Writer, option *option, env *env, args *args) *cli {
+	return &cli{
+		outStream: outStream,
+		errStream: errStream,
+		option:    option,
+		env:       env,
+		args:      args,
+		fatalLog:  newFatalLogger(errStream),
+	}
+}
 
 // application option
 type option struct {
@@ -151,5 +171,7 @@ func main() {
 	}
 	args := newArgs(boilerplateName, projectPath)
 
-	os.Exit(run(option, env, args, os.Stdout, os.Stderr))
+	cli := newCLI(os.Stdout, os.Stderr, option, env, args)
+
+	os.Exit(cli.run())
 }

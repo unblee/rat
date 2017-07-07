@@ -14,57 +14,63 @@ import (
 )
 
 // main process
-func run(option *option, env *env, args *args, outStream, errStream io.Writer) int {
-	fatalLog := newFatalLogger(errStream)
-
+func (c *cli) run() int {
 	// --version
 	// show version
-	if option.showVersion {
-		fmt.Println(outStream, "rat version "+version)
-		return exitCodeOK
+	if c.option.showVersion {
+		return c.showVersion()
 	}
 
 	// --list
 	// show boilerplate list
-	if option.showList {
-		blist, err := blplList(env.ratRoot)
-		if err != nil {
-			fatalLog.Println(err)
-			return exitCodeError
-		}
-
-		// print
-		for _, name := range blist {
-			fmt.Fprintln(outStream, name)
-		}
-		return exitCodeOK
+	if c.option.showList {
+		return c.showList()
 	}
 
 	// select boilerplate
 	var srcBoilerplatePath string
-	if args.boilerplateName != "" {
-		srcBoilerplatePath = filepath.Join(env.ratRoot, args.boilerplateName)
+	if c.args.boilerplateName != "" {
+		srcBoilerplatePath = filepath.Join(c.env.ratRoot, c.args.boilerplateName)
 	} else {
-		bname, err := selectBlpl(env.ratRoot, env.ratSelectCmd)
+		bname, err := selectBlpl(c.env.ratRoot, c.env.ratSelectCmd)
 		if err != nil {
-			fatalLog.Println(err)
+			c.fatalLog.Println(err)
 			return exitCodeError
 		}
-		srcBoilerplatePath = filepath.Join(env.ratRoot, bname)
+		srcBoilerplatePath = filepath.Join(c.env.ratRoot, bname)
 	}
 	if !fileExists(srcBoilerplatePath) {
-		fatalLog.Printf("Not exists directory '%s'", srcBoilerplatePath)
+		c.fatalLog.Printf("Not exists directory '%s'", srcBoilerplatePath)
 		return exitCodeError
 	}
 
 	// copy boilerplate-name to project-name
-	dstProjectPath := args.projectPath
+	dstProjectPath := c.args.projectPath
 	err := copyDir(dstProjectPath, srcBoilerplatePath)
 	if err != nil {
-		fatalLog.Println(err)
+		c.fatalLog.Println(err)
 		return exitCodeError
 	}
 
+	return exitCodeOK
+}
+
+func (c *cli) showVersion() int {
+	fmt.Fprintln(c.outStream, "rat version "+VERSION)
+	return exitCodeOK
+}
+
+func (c *cli) showList() int {
+	blist, err := blplList(c.env.ratRoot)
+	if err != nil {
+		c.fatalLog.Println(err)
+		return exitCodeError
+	}
+
+	// print
+	for _, name := range blist {
+		fmt.Fprintln(c.outStream, name)
+	}
 	return exitCodeOK
 }
 
@@ -98,17 +104,17 @@ func blplList(ratRoot string) ([]string, error) {
 }
 
 // select boilerplate name
-func selectBlpl(ratRoot, ratSelectCmd string) (string, error) {
-	if ratSelectCmd == "" {
+func selectBlpl(rootPath, selectCmd string) (string, error) {
+	if selectCmd == "" {
 		return "", errors.New("Please set 'RAT_SELECT_CMD' environment value")
 	}
-	list, err := blplList(ratRoot)
+	list, err := blplList(rootPath)
 	if err != nil {
 		return "", err
 	}
 
 	var buf bytes.Buffer
-	err = runSelect(ratSelectCmd, strings.NewReader(strings.Join(list, "\n")), &buf)
+	err = runSelect(selectCmd, strings.NewReader(strings.Join(list, "\n")), &buf)
 	if err != nil {
 		return "", err
 	}
