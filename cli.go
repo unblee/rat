@@ -215,13 +215,6 @@ func (c *CLI) blplList() ([]string, error) {
 
 // select boilerplate name
 func (c *CLI) selectBlpl() (string, error) {
-	if c.cfg.ratSelectCmd == "" {
-		return "", errors.New("Please set 'RAT_SELECT_CMD' environment value")
-	}
-	if !cmdExists(c.cfg.ratSelectCmd) {
-		return "", fmt.Errorf("Not exists '%s' command", c.cfg.ratSelectCmd)
-	}
-
 	list, err := c.blplList()
 	if err != nil {
 		return "", err
@@ -240,6 +233,13 @@ func (c *CLI) selectBlpl() (string, error) {
 
 // run selector command
 func (c *CLI) runSelect(r io.Reader, w io.Writer) error {
+	if c.cfg.ratSelectCmd == "" {
+		return errors.New("Please set 'RAT_SELECT_CMD' environment value")
+	}
+	if !cmdExists(c.cfg.ratSelectCmd) {
+		return fmt.Errorf("Not exists '%s' command", c.cfg.ratSelectCmd)
+	}
+
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
 		cmd = exec.Command("cmd", "/c", c.cfg.ratSelectCmd)
