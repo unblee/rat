@@ -90,7 +90,7 @@ func newCLI(outStream, errStream io.Writer, args []string) (*CLI, error) {
 	cli.setOption(showList, showVersion)
 
 	// set environment values
-	ratSelectCmd := os.Getenv("RAT_SELECT_CMD")
+	ratSelectCmd := os.Getenv("RAT_SELECT_CMD") // if user do not use a selection filter, this value can be empty
 	ratRoot := os.Getenv("RAT_ROOT")
 	if ratRoot == "" {
 		return nil, fmt.Errorf("Please set 'RAT_ROOT' environment value")
