@@ -78,7 +78,10 @@ func (c *CLI) setEnv(ratRoot, ratSelectCmd string) error {
 		return fmt.Errorf("Not exists directory '%s'", ratRoot)
 	}
 
-	if ratSelectCmd == "" || !cmdExists(ratSelectCmd) {
+	if ratSelectCmd == "" {
+		return fmt.Errorf("Please set 'RAT_SELECT_CMD' environment value")
+	}
+	if !cmdExists(ratSelectCmd) {
 		return fmt.Errorf("Not exists '%s' command", ratSelectCmd)
 	}
 
