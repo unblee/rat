@@ -17,18 +17,19 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
-type cli struct {
+// CLI is the command line object
+type CLI struct {
 	outStream io.Writer
 	errStream io.Writer
-	option    *option
-	env       *env
-	arg       *arg
+	option    *Option
+	env       *Env
+	arg       *Arg
 	fatalLog  *log.Logger
 }
 
-func newCli(outStream, errStream io.Writer) *cli {
+func newCLI(outStream, errStream io.Writer) *CLI {
 	fatalLogger := newFatalLogger(errStream)
-	return &cli{
+	return &CLI{
 		outStream: outStream,
 		errStream: errStream,
 		fatalLog:  fatalLogger,
@@ -39,26 +40,26 @@ func newFatalLogger(errStream io.Writer) *log.Logger {
 	return log.New(errStream, "fatal: ", 0)
 }
 
-// application options
-type option struct {
+// Option is the command line options
+type Option struct {
 	showList    bool
 	showVersion bool
 }
 
-func (c *cli) setOption(showList, showVersion bool) {
-	c.option = &option{
+func (c *CLI) setOption(showList, showVersion bool) {
+	c.option = &Option{
 		showList:    showList,
 		showVersion: showVersion,
 	}
 }
 
-// application environment values
-type env struct {
+// Env is the command line environment values
+type Env struct {
 	ratRoot      string
 	ratSelectCmd string
 }
 
-func (c *cli) setEnv(ratRoot, ratSelectCmd string) error {
+func (c *CLI) setEnv(ratRoot, ratSelectCmd string) error {
 	if ratRoot == "" {
 		return fmt.Errorf("Please set 'RAT_ROOT' environment value")
 	}
@@ -81,7 +82,7 @@ func (c *cli) setEnv(ratRoot, ratSelectCmd string) error {
 		return fmt.Errorf("Not exists '%s' command", ratSelectCmd)
 	}
 
-	c.env = &env{
+	c.env = &Env{
 		ratRoot:      ratRoot,
 		ratSelectCmd: ratSelectCmd,
 	}
@@ -89,13 +90,13 @@ func (c *cli) setEnv(ratRoot, ratSelectCmd string) error {
 	return nil
 }
 
-// application arguments
-type arg struct {
+// Arg is the command line arguments
+type Arg struct {
 	boilerplateName string
 	projectPath     string
 }
 
-func (c *cli) setArg(boilerplateName, projectPath string) error {
+func (c *CLI) setArg(boilerplateName, projectPath string) error {
 	// expand path
 	projectPath, err := homedir.Expand(projectPath)
 	if err != nil {
@@ -103,7 +104,7 @@ func (c *cli) setArg(boilerplateName, projectPath string) error {
 	}
 	projectPath = os.ExpandEnv(projectPath)
 
-	c.arg = &arg{
+	c.arg = &Arg{
 		boilerplateName: boilerplateName,
 		projectPath:     projectPath,
 	}
@@ -112,7 +113,7 @@ func (c *cli) setArg(boilerplateName, projectPath string) error {
 }
 
 // main process
-func (c *cli) run(args []string) int {
+func (c *CLI) run(args []string) int {
 	if err := c.init(args); err != nil {
 		c.fatalLog.Println(err)
 		return exitCodeError
@@ -159,7 +160,7 @@ func (c *cli) run(args []string) int {
 }
 
 // set options, environment values and arguments to cli
-func (c *cli) init(args []string) error {
+func (c *CLI) init(args []string) error {
 	flags := flag.NewFlagSet(NAME, flag.ContinueOnError)
 	flags.SetOutput(c.outStream)
 
@@ -213,12 +214,12 @@ func (c *cli) init(args []string) error {
 	return nil
 }
 
-func (c *cli) showVersion() int {
+func (c *CLI) showVersion() int {
 	fmt.Fprintln(c.outStream, "rat version "+VERSION)
 	return exitCodeOK
 }
 
-func (c *cli) showList() int {
+func (c *CLI) showList() int {
 	blist, err := blplList(c.env.ratRoot)
 	if err != nil {
 		c.fatalLog.Println(err)

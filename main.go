@@ -17,7 +17,7 @@ const (
 )
 
 func main() {
-	cli := newCli(os.Stdout, os.Stderr)
+	cli := newCLI(os.Stdout, os.Stderr)
 	os.Exit(cli.run(os.Args))
 }
 
