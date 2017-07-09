@@ -19,19 +19,6 @@ const (
 	exitCodeError
 )
 
-const usageMsg = `
-NAME:
-    rat - Boilerplate manager
-
-USAGE:
-    rat [global-options] [boilerplate-name] project-name
-
-GLOBAL-OPTIONS:
-    --list, -l     Show boilerplate list
-    --version, -v  Show version
-    --help, -h     Show this message
-`
-
 type cli struct {
 	outStream io.Writer
 	errStream io.Writer
@@ -133,7 +120,7 @@ func main() {
 
 	// flag parse
 	flag.Usage = func() {
-		fmt.Println(usageMsg)
+		fmt.Println(helpText)
 		os.Exit(exitCodeOK)
 	}
 	var (
@@ -162,7 +149,7 @@ func main() {
 	switch flag.NArg() {
 	case 0:
 		if flag.NFlag() == 0 {
-			fmt.Println(usageMsg)
+			fmt.Println(helpText)
 			os.Exit(exitCodeError)
 		}
 	case 1:
@@ -179,3 +166,16 @@ func main() {
 
 	os.Exit(cli.run())
 }
+
+const helpText = `
+NAME:
+    rat - Boilerplate manager
+
+USAGE:
+    rat [global-options] [boilerplate-name] project-name
+
+GLOBAL-OPTIONS:
+    --list, -l     Show boilerplate list
+    --version, -v  Show version
+    --help, -h     Show this message
+`
