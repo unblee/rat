@@ -136,15 +136,17 @@ func main() {
 		fmt.Println(usageMsg)
 		os.Exit(exitCodeOK)
 	}
-	showListL := flag.Bool("list", false, "Show boilerplate list")
-	showListS := flag.Bool("l", false, "Show boilerplate list")
-	showVersionL := flag.Bool("version", false, "Show version")
-	showVersionS := flag.Bool("v", false, "Show version")
+	var (
+		showList    bool
+		showVersion bool
+	)
+	flag.BoolVar(&showList, "list", false, "")
+	flag.BoolVar(&showList, "l", false, "")
+	flag.BoolVar(&showVersion, "version", false, "")
+	flag.BoolVar(&showVersion, "v", false, "")
 	flag.Parse()
 
 	// get option
-	showList := *showListL || *showListS
-	showVersion := *showVersionL || *showVersionS
 	option := newOption(showList, showVersion)
 
 	// get env
@@ -153,8 +155,10 @@ func main() {
 	env := newEnv(ratRoot, ratSelectCmd)
 
 	// get args
-	var boilerplateName string
-	var projectPath string
+	var (
+		boilerplateName string
+		projectPath     string
+	)
 	switch flag.NArg() {
 	case 0:
 		if flag.NFlag() == 0 {
