@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -17,8 +18,12 @@ const (
 )
 
 func main() {
-	cli := newCLI(os.Stdout, os.Stderr)
-	os.Exit(cli.run(os.Args))
+	cli, err := newCLI(os.Stdout, os.Stderr, os.Args)
+	if err != nil {
+		fmt.Printf("fatal: %s", err)
+		os.Exit(exitCodeError)
+	}
+	os.Exit(cli.run())
 }
 
 const helpText = `

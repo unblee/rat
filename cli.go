@@ -21,139 +21,36 @@ import (
 type CLI struct {
 	outStream io.Writer
 	errStream io.Writer
-	option    *Option
-	env       *Env
-	arg       *Arg
 	fatalLog  *log.Logger
+	cfg       *Config
 }
 
-func newCLI(outStream, errStream io.Writer) *CLI {
-	fatalLogger := newFatalLogger(errStream)
-	return &CLI{
-		outStream: outStream,
-		errStream: errStream,
-		fatalLog:  fatalLogger,
-	}
-}
-
-func newFatalLogger(errStream io.Writer) *log.Logger {
-	return log.New(errStream, "fatal: ", 0)
-}
-
-// Option is the command line options
-type Option struct {
-	showList    bool
-	showVersion bool
-}
-
-func (c *CLI) setOption(showList, showVersion bool) {
-	c.option = &Option{
-		showList:    showList,
-		showVersion: showVersion,
-	}
-}
-
-// Env is the command line environment values
-type Env struct {
-	ratRoot      string
-	ratSelectCmd string
-}
-
-func (c *CLI) setEnv(ratRoot, ratSelectCmd string) error {
-	if ratRoot == "" {
-		return fmt.Errorf("Please set 'RAT_ROOT' environment value")
-	}
-
-	// expand path
-	ratRoot, err := homedir.Expand(ratRoot)
-	if err != nil {
-		return err
-	}
-	ratRoot = os.ExpandEnv(ratRoot)
-
-	// delete the suffix directory separator to unify the handling of the path
-	ratRoot = strings.TrimSuffix(ratRoot, string(filepath.Separator))
-
-	if !fileExists(ratRoot) {
-		return fmt.Errorf("Not exists directory '%s'", ratRoot)
-	}
-
-	if ratSelectCmd == "" {
-		return fmt.Errorf("Please set 'RAT_SELECT_CMD' environment value")
-	}
-	if !cmdExists(ratSelectCmd) {
-		return fmt.Errorf("Not exists '%s' command", ratSelectCmd)
-	}
-
-	c.env = &Env{
-		ratRoot:      ratRoot,
-		ratSelectCmd: ratSelectCmd,
-	}
-
-	return nil
-}
-
-// Arg is the command line arguments
-type Arg struct {
+// Config is the command line config
+type Config struct {
+	showList        bool
+	showVersion     bool
+	ratRoot         string
+	ratSelectCmd    string
 	boilerplateName string
 	projectPath     string
 }
 
-func (c *CLI) setArg(boilerplateName, projectPath string) error {
-	// expand path
-	projectPath, err := homedir.Expand(projectPath)
-	if err != nil {
-		return err
-	}
-	projectPath = os.ExpandEnv(projectPath)
-
-	c.arg = &Arg{
-		boilerplateName: boilerplateName,
-		projectPath:     projectPath,
-	}
-
-	return nil
-}
-
 // main process
-func (c *CLI) run(args []string) int {
-	if err := c.init(args); err != nil {
-		c.fatalLog.Println(err)
-		return exitCodeError
-	}
-
+func (c *CLI) run() int {
 	// --version
 	// show version
-	if c.option.showVersion {
+	if c.cfg.showVersion {
 		return c.showVersion()
 	}
 
 	// --list
 	// show boilerplate list
-	if c.option.showList {
+	if c.cfg.showList {
 		return c.showList()
 	}
 
-	// select boilerplate
-	var srcBoilerplatePath string
-	if c.arg.boilerplateName != "" {
-		srcBoilerplatePath = filepath.Join(c.env.ratRoot, c.arg.boilerplateName)
-	} else {
-		bname, err := selectBlpl(c.env.ratRoot, c.env.ratSelectCmd)
-		if err != nil {
-			c.fatalLog.Println(err)
-			return exitCodeError
-		}
-		srcBoilerplatePath = filepath.Join(c.env.ratRoot, bname)
-	}
-	if !fileExists(srcBoilerplatePath) {
-		c.fatalLog.Printf("Not exists directory '%s'", srcBoilerplatePath)
-		return exitCodeError
-	}
-
 	// copy boilerplate-name to project-name
-	dstProjectPath := c.arg.projectPath
-	err := copyDir(dstProjectPath, srcBoilerplatePath)
+	err := c.copyDir()
 	if err != nil {
 		c.fatalLog.Println(err)
 		return exitCodeError
@@ -162,14 +59,21 @@ func (c *CLI) run(args []string) int {
 	return exitCodeOK
 }
 
-// set options, environment values and arguments to cli
-func (c *CLI) init(args []string) error {
+// New is constructor of CLI
+// Set options, environment values and arguments to cli
+func newCLI(outStream, errStream io.Writer, args []string) (*CLI, error) {
+	cli := &CLI{
+		outStream: outStream,
+		errStream: errStream,
+		fatalLog:  newFatalLogger(errStream),
+	}
+
 	flags := flag.NewFlagSet(NAME, flag.ContinueOnError)
-	flags.SetOutput(c.outStream)
+	flags.SetOutput(outStream)
 
 	// parsing flags
 	flags.Usage = func() {
-		fmt.Fprintln(c.outStream, helpText)
+		fmt.Fprintln(cli.outStream, helpText)
 		os.Exit(exitCodeOK)
 	}
 	var (
@@ -183,13 +87,16 @@ func (c *CLI) init(args []string) error {
 	flags.Parse(args[1:])
 
 	// set options
-	c.setOption(showList, showVersion)
+	cli.setOption(showList, showVersion)
 
 	// set environment values
 	ratSelectCmd := os.Getenv("RAT_SELECT_CMD")
 	ratRoot := os.Getenv("RAT_ROOT")
-	if err := c.setEnv(ratRoot, ratSelectCmd); err != nil {
-		return err
+	if ratRoot == "" {
+		return nil, fmt.Errorf("Please set 'RAT_ROOT' environment value")
+	}
+	if err := cli.setEnv(ratRoot, ratSelectCmd); err != nil {
+		return nil, err
 	}
 
 	// set arguments
@@ -200,7 +107,7 @@ func (c *CLI) init(args []string) error {
 	switch flags.NArg() {
 	case 0:
 		if flags.NFlag() == 0 {
-			return fmt.Errorf("Please set 'project-name'\n %s", helpText)
+			return nil, fmt.Errorf("Please set 'project-name'\n %s", helpText)
 		}
 	case 1:
 		projectPath = flags.Arg(0)
@@ -208,11 +115,62 @@ func (c *CLI) init(args []string) error {
 		boilerplateName = flags.Arg(0)
 		projectPath = flags.Arg(1)
 	default:
-		return errors.New("Too many arguments")
+		return nil, errors.New("Too many arguments")
 	}
-	if err := c.setArg(boilerplateName, projectPath); err != nil {
+	if err := cli.setArg(boilerplateName, projectPath); err != nil {
+		return nil, err
+	}
+
+	return cli, nil
+}
+
+func newFatalLogger(errStream io.Writer) *log.Logger {
+	return log.New(errStream, "fatal: ", 0)
+}
+
+// set the command line options
+func (c *CLI) setOption(showList, showVersion bool) {
+	c.cfg.showList = showList
+	c.cfg.showVersion = showVersion
+}
+
+// set the command line environment values
+func (c *CLI) setEnv(ratRoot, ratSelectCmd string) error {
+	// expand path
+	ratRoot, err := homedir.Expand(ratRoot)
+	if err != nil {
 		return err
 	}
+	ratRoot = os.ExpandEnv(ratRoot)
+
+	// delete the suffix directory separator to unify the handling of the path
+	ratRoot = strings.TrimSuffix(ratRoot, string(filepath.Separator))
+
+	c.cfg.ratRoot = ratRoot
+	c.cfg.ratSelectCmd = ratSelectCmd
+
+	return nil
+}
+
+// set the command line arguments
+func (c *CLI) setArg(boilerplateName, projectPath string) error {
+	// expand path
+	projectPath, err := homedir.Expand(projectPath)
+	if err != nil {
+		return err
+	}
+	projectPath = os.ExpandEnv(projectPath)
+
+	// select boilerplate
+	if boilerplateName == "" {
+		boilerplateName, err = c.selectBlpl()
+		if err != nil {
+			return err
+		}
+	}
+
+	c.cfg.boilerplateName = boilerplateName
+	c.cfg.projectPath = projectPath
 
 	return nil
 }
@@ -223,7 +181,7 @@ func (c *CLI) showVersion() int {
 }
 
 func (c *CLI) showList() int {
-	blist, err := blplList(c.env.ratRoot)
+	blist, err := c.blplList()
 	if err != nil {
 		c.fatalLog.Println(err)
 		return exitCodeError
@@ -236,20 +194,10 @@ func (c *CLI) showList() int {
 	return exitCodeOK
 }
 
-func fileExists(filename string) bool {
-	_, err := os.Stat(filename)
-	return err == nil
-}
-
-func cmdExists(cmd string) bool {
-	_, err := exec.LookPath(cmd)
-	return err == nil
-}
-
 // list of boilerplate directries
-func blplList(ratRoot string) ([]string, error) {
+func (c *CLI) blplList() ([]string, error) {
 	// ls ratRoot
-	dirs, err := ioutil.ReadDir(ratRoot)
+	dirs, err := ioutil.ReadDir(c.cfg.ratRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -266,17 +214,21 @@ func blplList(ratRoot string) ([]string, error) {
 }
 
 // select boilerplate name
-func selectBlpl(rootPath, selectCmd string) (string, error) {
-	if selectCmd == "" {
+func (c *CLI) selectBlpl() (string, error) {
+	if c.cfg.ratSelectCmd == "" {
 		return "", errors.New("Please set 'RAT_SELECT_CMD' environment value")
 	}
-	list, err := blplList(rootPath)
+	if !cmdExists(c.cfg.ratSelectCmd) {
+		return "", fmt.Errorf("Not exists '%s' command", c.cfg.ratSelectCmd)
+	}
+
+	list, err := c.blplList()
 	if err != nil {
 		return "", err
 	}
 
 	var buf bytes.Buffer
-	err = runSelect(selectCmd, strings.NewReader(strings.Join(list, "\n")), &buf)
+	err = c.runSelect(strings.NewReader(strings.Join(list, "\n")), &buf)
 	if err != nil {
 		return "", err
 	}
@@ -287,12 +239,12 @@ func selectBlpl(rootPath, selectCmd string) (string, error) {
 }
 
 // run selector command
-func runSelect(selectCmd string, r io.Reader, w io.Writer) error {
+func (c *CLI) runSelect(r io.Reader, w io.Writer) error {
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", selectCmd)
+		cmd = exec.Command("cmd", "/c", c.cfg.ratSelectCmd)
 	} else {
-		cmd = exec.Command("sh", "-c", selectCmd)
+		cmd = exec.Command("sh", "-c", c.cfg.ratSelectCmd)
 	}
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = r
@@ -300,7 +252,23 @@ func runSelect(selectCmd string, r io.Reader, w io.Writer) error {
 	return cmd.Run()
 }
 
-func copyDir(dst, src string) error {
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil
+}
+
+func cmdExists(cmd string) bool {
+	_, err := exec.LookPath(cmd)
+	return err == nil
+}
+
+func (c *CLI) copyDir() error {
+	dst := c.cfg.projectPath
+	src := filepath.Join(c.cfg.ratRoot, c.cfg.boilerplateName)
+	if !fileExists(src) {
+		c.fatalLog.Printf("Not exists directory '%s'", src)
+	}
+
 	os.Mkdir(dst, 0755)
 	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		// e.g.
