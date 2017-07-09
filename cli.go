@@ -252,13 +252,13 @@ func (c *CLI) runSelect(r io.Reader, w io.Writer) error {
 	return cmd.Run()
 }
 
-func fileExists(filename string) bool {
-	_, err := os.Stat(filename)
+func fileExists(filepath string) bool {
+	_, err := os.Stat(filepath)
 	return err == nil
 }
 
-func cmdExists(cmd string) bool {
-	_, err := exec.LookPath(cmd)
+func cmdExists(cmdname string) bool {
+	_, err := exec.LookPath(cmdname)
 	return err == nil
 }
 
