@@ -3,18 +3,121 @@ package main
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/mitchellh/go-homedir"
 )
 
+type cli struct {
+	outStream io.Writer
+	errStream io.Writer
+	option    *option
+	env       *env
+	arg       *arg
+	fatalLog  *log.Logger
+}
+
+func newCli(outStream, errStream io.Writer) *cli {
+	fatalLogger := newFatalLogger(errStream)
+	return &cli{
+		outStream: outStream,
+		errStream: errStream,
+		fatalLog:  fatalLogger,
+	}
+}
+
+func newFatalLogger(errStream io.Writer) *log.Logger {
+	return log.New(errStream, "fatal: ", 0)
+}
+
+// application options
+type option struct {
+	showList    bool
+	showVersion bool
+}
+
+func (c *cli) setOption(showList, showVersion bool) {
+	c.option = &option{
+		showList:    showList,
+		showVersion: showVersion,
+	}
+}
+
+// application environment values
+type env struct {
+	ratRoot      string
+	ratSelectCmd string
+}
+
+func (c *cli) setEnv(ratRoot, ratSelectCmd string) error {
+	if ratRoot == "" {
+		return fmt.Errorf("Please set 'RAT_ROOT' environment value")
+	}
+
+	// expand path
+	ratRoot, err := homedir.Expand(ratRoot)
+	if err != nil {
+		return err
+	}
+	ratRoot = os.ExpandEnv(ratRoot)
+
+	// delete the suffix directory separator to unify the handling of the path
+	ratRoot = strings.TrimSuffix(ratRoot, string(filepath.Separator))
+
+	if !fileExists(ratRoot) {
+		return fmt.Errorf("Not exists directory '%s'", ratRoot)
+	}
+
+	if ratSelectCmd == "" || !cmdExists(ratSelectCmd) {
+		return fmt.Errorf("Not exists '%s' command", ratSelectCmd)
+	}
+
+	c.env = &env{
+		ratRoot:      ratRoot,
+		ratSelectCmd: ratSelectCmd,
+	}
+
+	return nil
+}
+
+// application arguments
+type arg struct {
+	boilerplateName string
+	projectPath     string
+}
+
+func (c *cli) setArg(boilerplateName, projectPath string) error {
+	// expand path
+	projectPath, err := homedir.Expand(projectPath)
+	if err != nil {
+		return err
+	}
+	projectPath = os.ExpandEnv(projectPath)
+
+	c.arg = &arg{
+		boilerplateName: boilerplateName,
+		projectPath:     projectPath,
+	}
+
+	return nil
+}
+
 // main process
-func (c *cli) run() int {
+func (c *cli) run(args []string) int {
+	if err := c.init(args); err != nil {
+		c.fatalLog.Println(err)
+		return exitCodeError
+	}
+
 	// --version
 	// show version
 	if c.option.showVersion {
@@ -29,8 +132,8 @@ func (c *cli) run() int {
 
 	// select boilerplate
 	var srcBoilerplatePath string
-	if c.args.boilerplateName != "" {
-		srcBoilerplatePath = filepath.Join(c.env.ratRoot, c.args.boilerplateName)
+	if c.arg.boilerplateName != "" {
+		srcBoilerplatePath = filepath.Join(c.env.ratRoot, c.arg.boilerplateName)
 	} else {
 		bname, err := selectBlpl(c.env.ratRoot, c.env.ratSelectCmd)
 		if err != nil {
@@ -45,7 +148,7 @@ func (c *cli) run() int {
 	}
 
 	// copy boilerplate-name to project-name
-	dstProjectPath := c.args.projectPath
+	dstProjectPath := c.arg.projectPath
 	err := copyDir(dstProjectPath, srcBoilerplatePath)
 	if err != nil {
 		c.fatalLog.Println(err)
@@ -53,6 +156,61 @@ func (c *cli) run() int {
 	}
 
 	return exitCodeOK
+}
+
+// set options, environment values and arguments to cli
+func (c *cli) init(args []string) error {
+	flags := flag.NewFlagSet(NAME, flag.ContinueOnError)
+	flags.SetOutput(c.outStream)
+
+	// parsing flags
+	flags.Usage = func() {
+		fmt.Fprintln(c.outStream, helpText)
+		os.Exit(exitCodeOK)
+	}
+	var (
+		showList    bool
+		showVersion bool
+	)
+	flags.BoolVar(&showList, "list", false, "")
+	flags.BoolVar(&showList, "l", false, "")
+	flags.BoolVar(&showVersion, "version", false, "")
+	flags.BoolVar(&showVersion, "v", false, "")
+	flags.Parse(args[1:])
+
+	// set options
+	c.setOption(showList, showVersion)
+
+	// set environment values
+	ratSelectCmd := os.Getenv("RAT_SELECT_CMD")
+	ratRoot := os.Getenv("RAT_ROOT")
+	if err := c.setEnv(ratRoot, ratSelectCmd); err != nil {
+		return err
+	}
+
+	// set arguments
+	var (
+		boilerplateName string
+		projectPath     string
+	)
+	switch flags.NArg() {
+	case 0:
+		if flags.NFlag() == 0 {
+			return fmt.Errorf("Please set 'project-name'\n %s", helpText)
+		}
+	case 1:
+		projectPath = flags.Arg(0)
+	case 2:
+		boilerplateName = flags.Arg(0)
+		projectPath = flags.Arg(1)
+	default:
+		return errors.New("Too many arguments")
+	}
+	if err := c.setArg(boilerplateName, projectPath); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *cli) showVersion() int {
