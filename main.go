@@ -31,7 +31,7 @@ NAME:
     rat - Boilerplate manager
 
 USAGE:
-    rat [global-options] [boilerplate-name] project-name
+    rat [GLOBAL-OPTIONS] [<boilerplate-name>] project-name
 
 GLOBAL-OPTIONS:
     --list, -l     Show boilerplate list
