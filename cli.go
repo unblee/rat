@@ -59,8 +59,7 @@ func (c *CLI) run() int {
 	return exitCodeOK
 }
 
-// New is constructor of CLI
-// Set options, environment values and arguments to cli
+// set options, environment values and arguments to CLI
 func newCLI(outStream, errStream io.Writer, args []string) (*CLI, error) {
 	cli := &CLI{
 		outStream: outStream,
