@@ -67,6 +67,16 @@ func newCLI(outStream, errStream io.Writer, args []string) (*CLI, error) {
 		fatalLog:  newFatalLogger(errStream),
 	}
 
+	// cli config vars
+	var (
+		showList        bool
+		showVersion     bool
+		ratSelectCmd    string
+		ratRoot         string
+		boilerplateName string
+		projectPath     string
+	)
+
 	flags := flag.NewFlagSet(NAME, flag.ContinueOnError)
 	flags.SetOutput(outStream)
 
@@ -75,10 +85,6 @@ func newCLI(outStream, errStream io.Writer, args []string) (*CLI, error) {
 		fmt.Fprintln(cli.outStream, helpText)
 		os.Exit(exitCodeOK)
 	}
-	var (
-		showList    bool
-		showVersion bool
-	)
 	flags.BoolVar(&showList, "list", false, "")
 	flags.BoolVar(&showList, "l", false, "")
 	flags.BoolVar(&showVersion, "version", false, "")
@@ -89,8 +95,8 @@ func newCLI(outStream, errStream io.Writer, args []string) (*CLI, error) {
 	cli.setOption(showList, showVersion)
 
 	// set environment values
-	ratSelectCmd := os.Getenv("RAT_SELECT_CMD") // if user do not use a selection filter, this value can be empty
-	ratRoot := os.Getenv("RAT_ROOT")
+	ratSelectCmd = os.Getenv("RAT_SELECT_CMD") // if user do not use a selection filter, this value can be empty
+	ratRoot = os.Getenv("RAT_ROOT")
 	if ratRoot == "" {
 		return nil, fmt.Errorf("Please set 'RAT_ROOT' environment value")
 	}
@@ -99,16 +105,13 @@ func newCLI(outStream, errStream io.Writer, args []string) (*CLI, error) {
 	}
 
 	// set arguments
-	var (
-		boilerplateName string
-		projectPath     string
-	)
 	switch flags.NArg() {
 	case 0:
 		if flags.NFlag() == 0 {
 			return nil, fmt.Errorf("Please set 'project-name'\n %s", helpText)
 		}
 	case 1:
+		boilerplateName = ""
 		projectPath = flags.Arg(0)
 	case 2:
 		boilerplateName = flags.Arg(0)
