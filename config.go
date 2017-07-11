@@ -33,12 +33,13 @@ func loadConfig(outStream, errStream io.Writer, args []string) (*Config, error) 
 	flags := flag.NewFlagSet(NAME, flag.ContinueOnError)
 	flags.SetOutput(outStream)
 
-	// parsing flags
+	// set help text
 	flags.Usage = func() {
 		fmt.Fprintln(outStream, helpText)
 		os.Exit(exitCodeOK)
 	}
-	// set options
+
+	// set the command line options
 	flags.BoolVar(&cfg.showList, "list", false, "")
 	flags.BoolVar(&cfg.showList, "l", false, "")
 	flags.BoolVar(&cfg.showVersion, "version", false, "")
@@ -46,8 +47,8 @@ func loadConfig(outStream, errStream io.Writer, args []string) (*Config, error) 
 	flags.Parse(args[1:])
 
 	// set environment values
-	cfg.ratRoot = os.Getenv("RAT_SELECT_CMD") // if user do not use a selection filter, this value can be empty
-	cfg.ratSelectCmd = os.Getenv("RAT_ROOT")
+	cfg.ratRoot = os.Getenv("RAT_ROOT") // if user do not use a selection filter, this value can be empty
+	cfg.ratSelectCmd = os.Getenv("RAT_SELECT_CMD")
 
 	// set arguments
 	switch flags.NArg() {
