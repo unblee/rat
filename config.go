@@ -86,7 +86,7 @@ func (cfg *Config) validate() error {
 	cfg.ratRoot = strings.TrimSuffix(ratRoot, string(filepath.Separator))
 
 	// -- boilerplateName validation
-	if cfg.boilerplateName == "" {
+	if cfg.hasExecSelectCmd() {
 		// -- ratSelectCmd validation
 		if cfg.ratSelectCmd == "" {
 			return errors.New("Please set 'RAT_SELECT_CMD' environment value")
@@ -110,6 +110,12 @@ func (cfg *Config) validate() error {
 	cfg.projectPath = os.ExpandEnv(projectPath)
 
 	return nil
+}
+
+// returns true if options and boilerplate name are not specified.
+// that is, select command is executed.
+func (cfg *Config) hasExecSelectCmd() bool {
+	return !(cfg.showList || cfg.showVersion) && cfg.boilerplateName == ""
 }
 
 // list of boilerplate directries
