@@ -27,15 +27,15 @@ type Config struct {
 }
 
 // set options, environment values and arguments to Config
-func loadConfig(outStream, errStream io.Writer, args []string) (*Config, error) {
+func loadConfig(stdout, errStream io.Writer, args []string) (*Config, error) {
 	cfg := new(Config)
 
 	flags := flag.NewFlagSet(NAME, flag.ContinueOnError)
-	flags.SetOutput(outStream)
+	flags.SetOutput(stdout)
 
 	// set help text
 	flags.Usage = func() {
-		fmt.Fprintln(outStream, helpText)
+		fmt.Fprintln(stdout, helpText)
 		os.Exit(exitCodeOK)
 	}
 

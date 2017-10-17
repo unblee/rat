@@ -11,27 +11,27 @@ import (
 
 // CLI is the command line object
 type CLI struct {
-	outStream io.Writer
-	errStream io.Writer
-	fatalLog  *log.Logger
-	cfg       *Config
+	stdout   io.Writer
+	stderr   io.Writer
+	fatalLog *log.Logger
+	cfg      *Config
 }
 
-func newCLI(outStream, errStream io.Writer, args []string) (*CLI, error) {
-	cfg, err := loadConfig(outStream, errStream, args)
+func newCLI(stdout, stderr io.Writer, args []string) (*CLI, error) {
+	cfg, err := loadConfig(stdout, stderr, args)
 	if err != nil {
 		return nil, err
 	}
 	return &CLI{
-		outStream: outStream,
-		errStream: errStream,
-		fatalLog:  newFatalLogger(errStream),
-		cfg:       cfg,
+		stdout:   stdout,
+		stderr:   stderr,
+		fatalLog: newFatalLogger(stderr),
+		cfg:      cfg,
 	}, nil
 }
 
-func newFatalLogger(errStream io.Writer) *log.Logger {
-	return log.New(errStream, "fatal: ", 0)
+func newFatalLogger(stderr io.Writer) *log.Logger {
+	return log.New(stderr, "fatal: ", 0)
 }
 
 // main process
@@ -68,7 +68,7 @@ func (c *CLI) outputList() int {
 
 	// print
 	for _, name := range blist {
-		fmt.Fprintln(c.outStream, name)
+		fmt.Fprintln(c.stdout, name)
 	}
 	return exitCodeOK
 }
