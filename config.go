@@ -81,6 +81,9 @@ func loadConfig(stdout, errStream io.Writer, args []string) (*Config, error) {
 func (cfg *Config) validate() error {
 	// -- ratRoot validation
 	// expand path
+	if cfg.ratRoot == "" {
+		return errors.New("Please set 'RAT_ROOT' environment value")
+	}
 	ratRoot, err := homedir.Expand(cfg.ratRoot)
 	if err != nil {
 		return err
@@ -119,7 +122,7 @@ func (cfg *Config) validate() error {
 // returns true if options and boilerplate name are not specified.
 // that is, select command is executed.
 func (cfg *Config) hasExecSelectCmd() bool {
-	return !(cfg.showList || cfg.showVersion) && cfg.boilerplateName == ""
+	return cfg.boilerplateName == ""
 }
 
 // list of boilerplate directries
