@@ -8,8 +8,6 @@ import (
 const (
 	// NAME is this application name
 	NAME = "rat"
-	// VERSION is this application version
-	VERSION = "0.1.0"
 )
 
 const (
