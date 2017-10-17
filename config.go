@@ -19,7 +19,6 @@ import (
 // Config is the command line config
 type Config struct {
 	showList        bool
-	showVersion     bool
 	ratRoot         string
 	ratSelectCmd    string
 	boilerplateName string
@@ -40,11 +39,16 @@ func loadConfig(stdout, errStream io.Writer, args []string) (*Config, error) {
 	}
 
 	// set the command line options
+	var showVersion bool
 	flags.BoolVar(&cfg.showList, "list", false, "")
 	flags.BoolVar(&cfg.showList, "l", false, "")
-	flags.BoolVar(&cfg.showVersion, "version", false, "")
-	flags.BoolVar(&cfg.showVersion, "v", false, "")
+	flags.BoolVar(&showVersion, "version", false, "")
+	flags.BoolVar(&showVersion, "v", false, "")
 	flags.Parse(args[1:])
+
+	if showVersion {
+		fmt.Fprintf(stdout, "rat version %s\n", VERSION)
+	}
 
 	// set environment values
 	cfg.ratRoot = os.Getenv("RAT_ROOT") // if user do not use a selection filter, this value can be empty

@@ -36,10 +36,6 @@ func newFatalLogger(stderr io.Writer) *log.Logger {
 
 // main process
 func (c *CLI) run() int {
-	if c.cfg.showVersion {
-		return c.outputVersion()
-	}
-
 	if c.cfg.showList {
 		return c.outputList()
 	}
@@ -51,11 +47,6 @@ func (c *CLI) run() int {
 		return exitCodeError
 	}
 
-	return exitCodeOK
-}
-
-func (c *CLI) outputVersion() int {
-	fmt.Fprintln(c.outStream, "rat version "+VERSION)
 	return exitCodeOK
 }
 
