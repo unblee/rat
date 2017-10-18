@@ -19,8 +19,8 @@ import (
 // Config is the command line config
 type Config struct {
 	showList        bool
-	ratSelectCmd    string
 	root            string
+	filter          string
 	boilerplateName string
 	projectPath     string
 }
@@ -45,11 +45,15 @@ func loadConfig(stdout, errStream io.Writer, args []string) (*Config, error) {
 	}
 	defaultRoot := filepath.Join(home, ".rat")
 
+	// set filter command to be used by default
+	defaultFilter := "peco"
+
 	// set the command line options
 	var showVersion bool
 	flags.BoolVar(&cfg.showList, "list", false, "")
 	flags.BoolVar(&cfg.showList, "l", false, "")
 	flags.StringVar(&cfg.root, "root", defaultRoot, "")
+	flags.StringVar(&cfg.filter, "filter", defaultFilter, "")
 	flags.BoolVar(&showVersion, "version", false, "")
 	flags.BoolVar(&showVersion, "v", false, "")
 	flags.Parse(args[1:])
@@ -59,8 +63,8 @@ func loadConfig(stdout, errStream io.Writer, args []string) (*Config, error) {
 	}
 
 	// set environment values
-	cfg.ratSelectCmd = os.Getenv("RAT_SELECT_CMD")
 	cfg.root = os.Getenv("RAT_ROOT")
+	cfg.filter = os.Getenv("RAT_FILTER")
 
 	// set arguments
 	switch flags.NArg() {
@@ -101,16 +105,16 @@ func (cfg *Config) validate() error {
 	cfg.root = strings.TrimSuffix(ratRoot, string(filepath.Separator))
 
 	// -- boilerplateName validation
-	if cfg.hasExecSelectCmd() {
-		// -- ratSelectCmd validation
-		if cfg.ratSelectCmd == "" {
-			return errors.New("Please set 'RAT_SELECT_CMD' environment value")
+	if cfg.hasExecFilter() {
+		// -- filter validation
+		if cfg.filter == "" {
+			return errors.New("Please set 'RAT_FILTER' environment value")
 		}
-		if !cmdExists(cfg.ratSelectCmd) {
-			return fmt.Errorf("Not exists '%s' command", cfg.ratSelectCmd)
+		if !cmdExists(cfg.filter) {
+			return fmt.Errorf("Not exists '%s' command", cfg.filter)
 		}
 
-		boilerplateName, err := cfg.selectBlpl()
+		boilerplateName, err := cfg.filterBlpl()
 		if err != nil {
 			return err
 		}
@@ -128,8 +132,8 @@ func (cfg *Config) validate() error {
 }
 
 // returns true if options and boilerplate name are not specified.
-// that is, select command is executed.
-func (cfg *Config) hasExecSelectCmd() bool {
+// that is, filter command is executed.
+func (cfg *Config) hasExecFilter() bool {
 	return cfg.boilerplateName == ""
 }
 
@@ -152,15 +156,15 @@ func (cfg *Config) blplList() ([]string, error) {
 	return list, nil
 }
 
-// select boilerplate name
-func (cfg *Config) selectBlpl() (string, error) {
+// filter boilerplate name
+func (cfg *Config) filterBlpl() (string, error) {
 	list, err := cfg.blplList()
 	if err != nil {
 		return "", err
 	}
 
 	var buf bytes.Buffer
-	err = cfg.runSelect(strings.NewReader(strings.Join(list, "\n")), &buf)
+	err = cfg.runFilter(strings.NewReader(strings.Join(list, "\n")), &buf)
 	if err != nil {
 		return "", err
 	}
@@ -170,13 +174,13 @@ func (cfg *Config) selectBlpl() (string, error) {
 	return strings.TrimSuffix(buf.String(), "\n"), nil
 }
 
-// run selector command
-func (cfg *Config) runSelect(r io.Reader, w io.Writer) error {
+// run filter command
+func (cfg *Config) runFilter(r io.Reader, w io.Writer) error {
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", cfg.ratSelectCmd)
+		cmd = exec.Command("cmd", "/c", cfg.filter)
 	} else {
-		cmd = exec.Command("sh", "-c", cfg.ratSelectCmd)
+		cmd = exec.Command("sh", "-c", cfg.filter)
 	}
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = r
