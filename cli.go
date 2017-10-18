@@ -66,7 +66,7 @@ func (c *CLI) outputList() int {
 
 func (c *CLI) copyDir() error {
 	dst := c.cfg.projectPath
-	src := filepath.Join(c.cfg.ratRoot, c.cfg.boilerplateName)
+	src := filepath.Join(c.cfg.root, c.cfg.boilerplateName)
 	if !fileExists(src) {
 		c.fatalLog.Printf("Not exists directory '%s'", src)
 	}

@@ -19,8 +19,8 @@ import (
 // Config is the command line config
 type Config struct {
 	showList        bool
-	ratRoot         string
 	ratSelectCmd    string
+	root            string
 	boilerplateName string
 	projectPath     string
 }
@@ -38,10 +38,18 @@ func loadConfig(stdout, errStream io.Writer, args []string) (*Config, error) {
 		os.Exit(exitCodeOK)
 	}
 
+	// set a default boilerplates root directory
+	home, err := homedir.Dir()
+	if err != nil {
+		return nil, errors.New("failed to get a home directory path")
+	}
+	defaultRoot := filepath.Join(home, ".rat")
+
 	// set the command line options
 	var showVersion bool
 	flags.BoolVar(&cfg.showList, "list", false, "")
 	flags.BoolVar(&cfg.showList, "l", false, "")
+	flags.StringVar(&cfg.root, "root", defaultRoot, "")
 	flags.BoolVar(&showVersion, "version", false, "")
 	flags.BoolVar(&showVersion, "v", false, "")
 	flags.Parse(args[1:])
@@ -51,8 +59,8 @@ func loadConfig(stdout, errStream io.Writer, args []string) (*Config, error) {
 	}
 
 	// set environment values
-	cfg.ratRoot = os.Getenv("RAT_ROOT") // if user do not use a selection filter, this value can be empty
 	cfg.ratSelectCmd = os.Getenv("RAT_SELECT_CMD")
+	cfg.root = os.Getenv("RAT_ROOT")
 
 	// set arguments
 	switch flags.NArg() {
@@ -81,16 +89,16 @@ func loadConfig(stdout, errStream io.Writer, args []string) (*Config, error) {
 func (cfg *Config) validate() error {
 	// -- ratRoot validation
 	// expand path
-	if cfg.ratRoot == "" {
+	if cfg.root == "" {
 		return errors.New("Please set 'RAT_ROOT' environment value")
 	}
-	ratRoot, err := homedir.Expand(cfg.ratRoot)
+	ratRoot, err := homedir.Expand(cfg.root)
 	if err != nil {
 		return err
 	}
 	ratRoot = os.ExpandEnv(ratRoot)
 	// delete the suffix directory separator to unify the handling of the path
-	cfg.ratRoot = strings.TrimSuffix(ratRoot, string(filepath.Separator))
+	cfg.root = strings.TrimSuffix(ratRoot, string(filepath.Separator))
 
 	// -- boilerplateName validation
 	if cfg.hasExecSelectCmd() {
@@ -128,7 +136,7 @@ func (cfg *Config) hasExecSelectCmd() bool {
 // list of boilerplate directries
 func (cfg *Config) blplList() ([]string, error) {
 	// ls ratRoot
-	dirs, err := ioutil.ReadDir(cfg.ratRoot)
+	dirs, err := ioutil.ReadDir(cfg.root)
 	if err != nil {
 		return nil, err
 	}
