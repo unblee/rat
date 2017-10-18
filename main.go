@@ -33,6 +33,8 @@ USAGE:
 
 GLOBAL-OPTIONS:
     --list, -l     Show boilerplate list
+    --root         Root directory of boilerplates
+    --filter       Filter command
     --version, -v  Show version
     --help, -h     Show this message
 `
